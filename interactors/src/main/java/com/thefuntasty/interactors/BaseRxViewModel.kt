@@ -5,6 +5,7 @@ import com.thefuntasty.mvvm.BaseViewModel
 import com.thefuntasty.mvvm.ViewState
 import io.reactivex.Completable
 import io.reactivex.Flowable
+import io.reactivex.Maybe
 import io.reactivex.Observable
 import io.reactivex.Single
 import io.reactivex.disposables.CompositeDisposable
@@ -89,6 +90,24 @@ abstract class BaseRxViewModel<S : ViewState> : BaseViewModel<S>() {
         return disposable
     }
 
+    fun <T : Any> BaseMayber<T>.execute(onSuccess: (T) -> Unit, onComplete: () -> Unit) = execute(onSuccess, onComplete, onError = onErrorLambda)
+
+    fun <T : Any> BaseMayber<T>.execute(
+        onSuccess: (T) -> Unit,
+        onComplete: () -> Unit,
+        onError: (Throwable) -> Unit = onErrorLambda
+    ): Disposable {
+        this@execute.currentDisposable?.dispose()
+
+        val disposable = stream()
+            .subscribe(onSuccess, onError, onComplete)
+
+        this@execute.currentDisposable = disposable
+        disposables += disposable
+
+        return disposable
+    }
+
     fun <T : Any> Flowable<T>.executeStream(onNext: (T) -> Unit) = executeStream(onNext, onError = onErrorLambda)
 
     fun <T : Any> Flowable<T>.executeStream(
@@ -135,6 +154,18 @@ abstract class BaseRxViewModel<S : ViewState> : BaseViewModel<S>() {
         }
     }
 
+    fun <T : Any> Maybe<T>.executeStream(onSuccess: (T) -> Unit, onComplete: () -> Unit) = executeStream(onSuccess, onComplete, onError = onErrorLambda)
+
+    fun <T : Any> Maybe<T>.executeStream(
+        onSuccess: (T) -> Unit,
+        onComplete: () -> Unit,
+        onError: (Throwable) -> Unit = onErrorLambda
+    ): Disposable {
+        return subscribe(onSuccess, onError, onComplete).also {
+            disposables += it
+        }
+    }
+
     @VisibleForTesting
     internal fun <T : Any> BaseFlowabler<T>.executeSubscriber(subscriber: TestSubscriber<T>) {
         stream().subscribe(subscriber)
@@ -165,6 +196,14 @@ abstract class BaseRxViewModel<S : ViewState> : BaseViewModel<S>() {
         stream().subscribe(observer)
 
         disposables += observer
+    }
+
+    @VisibleForTesting
+    internal fun <T : Any> BaseMayber<T>.executeSubscriber(subscriber: TestSubscriber<T>) {
+        stream()
+            .toFlowable()
+            .subscribe(subscriber)
+        disposables += subscriber
     }
 
     override fun onCleared() {

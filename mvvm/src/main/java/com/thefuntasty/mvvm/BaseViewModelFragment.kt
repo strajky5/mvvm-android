@@ -16,7 +16,7 @@ abstract class BaseViewModelFragment<VM : BaseViewModel<VS>, VS : ViewState> :
     @CallSuper
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        viewModel = createViewModel().apply { lifecycle.addObserver(this) }
+        viewModel = createViewModel().apply { viewLifecycleOwner.lifecycle.addObserver(this) }
     }
 
     protected inline fun <reified VM : BaseViewModel<VS>> getViewModelFromProvider(): VM =
